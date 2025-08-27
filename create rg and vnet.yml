@@ -4,51 +4,32 @@ trigger:
       - main
 
 pool:
-  vmImage: 'ubuntu-latest'
-
-variables:
-  TF_WORKING_DIR: 'infra'  # adjust if your .tf files are elsewhere
+  vmImage: 'windows-latest'
 
 stages:
-- stage: Terraform_Deploy
+- stage: DeployInfra
   jobs:
-  - job: Deploy
+  - job: CreateRGandVNet
     steps:
 
-    - task: TerraformInstaller@1
+    - task: AzurePowerShell@5
+      displayName: 'Create RG and VNet with /29'
       inputs:
-        terraformVersion: 'latest'
+        azureSubscription: 'tmp15'  # ✅ Verified service connection
+        ScriptType: 'InlineScript'
+        Inline: |
+          $rgName = "x"
+          $location = "East US"  # Change if needed
+          $vnetName = "x-vnet"
+          $addressPrefix = "10.0.0.0/29"
 
-    - task: TerraformTaskV4@4
-      displayName: 'Terraform Init'
-      inputs:
-        provider: 'azurerm'
-        command: 'init'
-        workingDirectory: '$(TF_WORKING_DIR)'
-        backendServiceArm: 'tmp15'
+          Write-Host "Creating resource group: $rgName"
+          New-AzResourceGroup -Name $rgName -Location $location
 
-    - task: TerraformTaskV4@4
-      displayName: 'Terraform Validate'
-      inputs:
-        provider: 'azurerm'
-        command: 'validate'
-        workingDirectory: '$(TF_WORKING_DIR)'
-
-    - task: TerraformTaskV4@4
-      displayName: 'Terraform Plan'
-      inputs:
-        provider: 'azurerm'
-        command: 'plan'
-        workingDirectory: '$(TF_WORKING_DIR)'
-        environmentServiceNameAzureRM: 'tmp15'
-
-    - task: TerraformTaskV4@4
-      displayName: 'Terraform Apply'
-      inputs:
-        provider: 'azurerm'
-        command: 'apply'
-        workingDirectory: '$(TF_WORKING_DIR)'
-        environmentServiceNameAzureRM: 'tmp15'
-        ensureBackend: true
-        allowTelemetryCollection: false
-        runAzLogin: true
+          Write-Host "Creating virtual network: $vnetName with address space $addressPrefix"
+          New-AzVirtualNetwork -Name $vnetName `
+            -ResourceGroupName $rgName `
+            -Location $location `
+            -AddressPrefix $addressPrefix
+        azurePowerShellVersion: 'LatestVersion'
+        pwsh: true
