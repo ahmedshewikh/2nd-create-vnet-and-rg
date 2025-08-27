@@ -1,0 +1,31 @@
+trigger:
+  branches:
+    include:
+      - main  # or your working branch
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  TF_VERSION: '1.6.0'  # adjust if needed
+  ARM_CLIENT_ID: '02e4eabc-5bdf-4b32-ae74-fd470f1f3c4e'
+  ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)  # stored securely in pipeline variables
+  ARM_SUBSCRIPTION_ID: 'a7b25168-035a-487b-9046-21f8ea5b1423'
+  ARM_TENANT_ID: '8f8b9e7d-4c4f-4b6e-8c6e-3c6b6e6e6e6e'
+
+steps:
+- task: TerraformInstaller@1
+  inputs:
+    terraformVersion: $(TF_VERSION)
+
+- script: |
+    terraform init
+  displayName: 'Terraform Init'
+
+- script: |
+    terraform plan -out=tfplan
+  displayName: 'Terraform Plan'
+
+- script: |
+    terraform apply -auto-approve tfplan
+  displayName: 'Terraform Apply'
